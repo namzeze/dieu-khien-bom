@@ -20,9 +20,9 @@
         .status-box { padding: 12px; border-radius: 6px; font-weight: bold; font-size: 16px; margin-bottom: 12px; }
         .status-off { background: #f8d7da; color: #721c24; }
         .status-on { background: #d4edda; color: #155724; }
+        .status-manual { background: #cff4fc; color: #055160; border: 1px solid #b6effb; }
         .btn-toggle { background: #28a745; color: white; border: none; padding: 14px; width: 100%; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; }
         .btn-toggle.off { background: #dc3545; }
-        .btn-disabled { opacity: 0.5; cursor: not-allowed !important; }
         .sched-title { font-size: 18px; font-weight: bold; text-align: left; margin-top: 25px; margin-bottom: 15px; border-bottom: 2px solid #ddd; padding-bottom: 5px; color: #333; }
         .sched-card { background: #fdfdfd; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; margin-bottom: 12px; text-align: left; }
         .sched-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 8px; }
@@ -62,9 +62,9 @@
 
     const client = new Paho.MQTT.Client(hostname, port, clientId);
     let currentState = "OFF";
+    let isManualMode = false;
     let isDeviceOnline = false;
     let lastHeartbeat = 0;
-    let heartbeatTimer = null;
 
     const dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
@@ -75,7 +75,6 @@
     }
 
     function checkDeviceTimeout() {
-        // Nếu quá 6 giây không thấy tin nhắn từ ESP8266 => Báo Offline
         if (Date.now() - lastHeartbeat > 6000) {
             if (isDeviceOnline) {
                 isDeviceOnline = false;
@@ -158,11 +157,12 @@
             try {
                 const data = JSON.parse(payload);
                 currentState = data.status;
+                isManualMode = data.manual || false;
                 document.getElementById('sysTimeDisplay').innerText = data.time;
-                updateStatusUI(currentState === 'ON');
+                updateStatusUI(currentState === 'ON', isManualMode);
             } catch(e) {
                 currentState = payload;
-                updateStatusUI(currentState === 'ON');
+                updateStatusUI(currentState === 'ON', false);
             }
         } else if (topic === 'namzeze_khach1/get_schedules') {
             try {
@@ -206,7 +206,6 @@
 
     connectMQTT();
 
-    // Chạy vòng lặp kiểm tra kết nối thiết bị mỗi giây
     setInterval(checkDeviceTimeout, 1000);
 
     function publishMessage(topic, payload) {
@@ -219,19 +218,24 @@
         client.send(message);
     }
 
-    function updateStatusUI(isOn) {
+    function updateStatusUI(isOn, isManual) {
         const statusBox = document.getElementById('statusBox');
         const btn = document.getElementById('btnToggle');
         if (isOn) {
-            statusBox.className = 'status-box status-on';
-            statusBox.innerText = 'TRẠNG THÁI: BƠM ĐANG BẬT (ON)';
+            if (isManual) {
+                statusBox.className = 'status-box status-manual';
+                statusBox.innerText = 'TRẠNG THÁI: BƠM BẬT BẰNG TAY (MANUAL)';
+            } else {
+                statusBox.className = 'status-box status-on';
+                statusBox.innerText = 'TRẠNG THÁI: BƠM BẬT THEO LỊCH (AUTO)';
+            }
             btn.className = 'btn-toggle off';
             btn.innerText = 'TẮT BƠM NGAY';
         } else {
             statusBox.className = 'status-box status-off';
             statusBox.innerText = 'TRẠNG THÁI: BƠM ĐANG TẮT (OFF)';
             btn.className = 'btn-toggle';
-            btn.innerText = 'BẬT BƠM NGAY';
+            btn.innerText = 'BẬT BƠM BẰNG TAY (MANUAL)';
         }
     }
 
