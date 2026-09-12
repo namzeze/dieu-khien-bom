@@ -14,7 +14,9 @@
         .mqtt-offline { background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
         .mqtt-connecting { background: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
         .sys-time { font-size: 15px; font-weight: bold; color: #444; margin-bottom: 12px; }
-        .btn-sync { background: #17a2b8; color: white; border: none; padding: 10px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; margin-bottom: 12px; }
+        .btn-group { display: flex; gap: 8px; margin-bottom: 12px; }
+        .btn-sync { background: #17a2b8; color: white; border: none; padding: 10px; flex: 1; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-wifi { background: #ffc107; color: #333; border: none; padding: 10px; flex: 1; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .status-box { padding: 12px; border-radius: 6px; font-weight: bold; font-size: 16px; margin-bottom: 12px; }
         .status-off { background: #f8d7da; color: #721c24; }
         .status-on { background: #d4edda; color: #155724; }
@@ -38,7 +40,12 @@
     <div id="mqttStatusBox" class="mqtt-status mqtt-connecting">Hệ thống: Đang kết nối Server...</div>
 
     <div class="sys-time">Giờ hệ thống: <span id="sysTimeDisplay">--:--:-- - --/--/----</span></div>
-    <button class="btn-sync" onclick="syncPhoneTime()">ĐỒNG BỘ GIỜ ĐIỆN THOẠI</button>
+    
+    <div class="btn-group">
+        <button class="btn-sync" onclick="syncPhoneTime()">ĐỒNG BỘ GIỜ</button>
+        <button class="btn-wifi" onclick="resetWifi()">ĐỔI MẠNG WI-FI</button>
+    </div>
+
     <div id="statusBox" class="status-box status-off">TRẠNG THÁI: BƠM ĐANG TẮT (OFF)</div>
     <button id="btnToggle" class="btn-toggle" onclick="togglePump()">BẬT BƠM NGAY</button>
 
@@ -160,8 +167,6 @@
                 setMqttStatus('mqtt-online', 'Hệ thống: Đã kết nối (Sẵn sàng)');
                 client.subscribe('namzeze_khach1/status');
                 client.subscribe('namzeze_khach1/get_schedules');
-                
-                // Yêu cầu ESP gửi lại cả trạng thái lẫn danh sách lịch
                 publishMessage('namzeze_khach1/control', 'GET_STATUS');
             },
             onFailure: function (e) {
@@ -207,6 +212,13 @@
     function syncPhoneTime() {
         publishMessage('namzeze_khach1/control', 'GET_STATUS');
         alert("Đã gửi yêu cầu đồng bộ!");
+    }
+
+    function resetWifi() {
+        if (confirm("Xác nhận đổi mạng Wi-Fi? Thiết bị sẽ xóa Wi-Fi cũ và phát lại mạng 'Cai-Dat-Thiet-Bi'.")) {
+            publishMessage('namzeze_khach1/control', 'RESET_WIFI');
+            alert("Đã gửi lệnh! Hãy kết nối Wi-Fi điện thoại vào mạng 'Cai-Dat-Thiet-Bi' để nhập Wi-Fi mới.");
+        }
     }
 
     function saveSchedules() {
