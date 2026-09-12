@@ -3,173 +3,297 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Điều Khiển Máy Bơm</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+    <title>Điều Khiển Bơm Tự Động</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        h2, h3 { text-align: center; color: #007bff; margin-bottom: 15px; }
-        .card { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
-        .status { font-size: 20px; font-weight: bold; margin: 10px 0; padding: 8px 16px; border-radius: 6px; display: inline-block; }
-        .st-on { background: #d4edda; color: #155724; }
-        .st-off { background: #f8d7da; color: #721c24; }
-        .btn { padding: 12px 20px; font-size: 15px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; margin: 5px; }
-        .btn-on { background: #28a745; }
-        .btn-off { background: #dc3545; }
-        .btn-save { background: #007bff; width: 100%; margin-top: 15px; font-size: 16px; }
-        .schedule-row { display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 8px 12px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 6px; }
-        input[type="time"] { padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        body { font-family: Arial, sans-serif; background: #eef2f5; margin: 0; padding: 15px; }
+        .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: center; }
+        h2 { margin-top: 0; color: #222; }
+        .mqtt-status { padding: 10px; border-radius: 6px; font-weight: bold; font-size: 15px; margin-bottom: 12px; transition: 0.3s; }
+        .mqtt-online { background: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+        .mqtt-offline { background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+        .mqtt-connecting { background: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
+        .sys-time { font-size: 15px; font-weight: bold; color: #444; margin-bottom: 12px; }
+        .btn-group { display: flex; gap: 8px; margin-bottom: 12px; }
+        .btn-sync { background: #17a2b8; color: white; border: none; padding: 10px; flex: 1; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-wifi { background: #ffc107; color: #333; border: none; padding: 10px; flex: 1; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .status-box { padding: 12px; border-radius: 6px; font-weight: bold; font-size: 16px; margin-bottom: 12px; }
+        .status-off { background: #f8d7da; color: #721c24; }
+        .status-on { background: #d4edda; color: #155724; }
+        .btn-toggle { background: #28a745; color: white; border: none; padding: 14px; width: 100%; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .btn-toggle.off { background: #dc3545; }
+        .btn-disabled { opacity: 0.5; cursor: not-allowed !important; }
+        .sched-title { font-size: 18px; font-weight: bold; text-align: left; margin-top: 25px; margin-bottom: 15px; border-bottom: 2px solid #ddd; padding-bottom: 5px; color: #333; }
+        .sched-card { background: #fdfdfd; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; margin-bottom: 12px; text-align: left; }
+        .sched-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 8px; }
+        .time-row { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; font-size: 14px; }
+        select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; }
+        .days-group { display: flex; justify-content: space-between; font-size: 12px; text-align: center; margin-top: 10px; }
+        .day-item { display: flex; flex-direction: column; align-items: center; }
+        .btn-save { background: #0d6efd; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>ĐIỀU KHIỂN MÁY BƠM</h2>
+    <h2>Điều Khiển Bơm Tự Động</h2>
     
-    <div class="card">
-        <div id="system-time" style="font-size: 14px; color: #666;">Thời gian: Đang cập nhật...</div>
-        <div>Trạng thái: <span id="pump-status" class="status st-off">ĐANG TẮT</span></div>
-        <div style="margin-top: 15px;">
-            <button class="btn btn-on" onclick="sendControl('ON')">BẬT BƠM (MANUAL)</button>
-            <button class="btn btn-off" onclick="sendControl('OFF')">TẮT BƠM</button>
-        </div>
+    <div id="mqttStatusBox" class="mqtt-status mqtt-connecting">Đang kiểm tra kết nối thiết bị...</div>
+
+    <div class="sys-time">Giờ hệ thống: <span id="sysTimeDisplay">--:--:-- - --/--/----</span></div>
+    
+    <div class="btn-group">
+        <button class="btn-sync" onclick="syncPhoneTime()">ĐỒNG BỘ GIỜ</button>
+        <button class="btn-wifi" onclick="resetWifi()">ĐỔI MẠNG WI-FI</button>
     </div>
 
-    <h3>LỊCH HẸN GIỜ (10 Lịch)</h3>
-    <div id="schedules-container"></div>
-    <button class="btn btn-save" onclick="saveSchedules()">LƯU LỊCH HẸN GIỜ</button>
+    <div id="statusBox" class="status-box status-off">TRẠNG THÁI: BƠM ĐANG TẮT (OFF)</div>
+    <button id="btnToggle" class="btn-toggle" onclick="togglePump()">BẬT BƠM NGAY</button>
+
+    <div class="sched-title">Lịch Bơm Tự Động</div>
+    <div id="scheduleContainer"></div>
+    <button class="btn-save" onclick="saveSchedules()">LƯU LỊCH HẸN GIỜ</button>
 </div>
 
 <script>
-    // Sinh sẵn 10 dòng giao diện HTML
-    const container = document.getElementById("schedules-container");
-    let htmlContent = "";
-    for (let i = 0; i < 10; i++) {
-        htmlContent += `
-            <div class="schedule-row">
-                <label><input type="checkbox" id="active_${i}"> Lịch ${i + 1}</label>
-                <div>
-                    Bật: <input type="time" id="onH_${i}" value="00:00">
-                    Tắt: <input type="time" id="offH_${i}" value="00:00">
-                </div>
-            </div>
-        `;
+    const hostname = "broker.hivemq.com";
+    const port = 8884;
+    const clientId = "WebClient_" + Math.random().toString(16).substr(2, 8);
+
+    const client = new Paho.MQTT.Client(hostname, port, clientId);
+    let currentState = "OFF";
+    let isDeviceOnline = false;
+    let lastHeartbeat = 0;
+    let heartbeatTimer = null;
+
+    const dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+
+    function setMqttStatus(state, text) {
+        const box = document.getElementById('mqttStatusBox');
+        box.className = 'mqtt-status ' + state;
+        box.innerText = text;
     }
-    container.innerHTML = htmlContent;
 
-    // Cấu hình MQTT khớp hoàn toàn với Code ESP8266
-    const broker = "broker.hivemq.com";
-    // Sử dụng WSS (8884) để tương thích với GitHub Pages (HTTPS), dùng 8000 (ws) nếu chạy local
-    const port = location.protocol === 'https:' ? 8884 : 8000;
-    const useSSL = location.protocol === 'https:';
-    const clientId = "WebClient-" + Math.random().toString(16).substring(2, 8);
+    function checkDeviceTimeout() {
+        // Nếu quá 6 giây không thấy tin nhắn từ ESP8266 => Báo Offline
+        if (Date.now() - lastHeartbeat > 6000) {
+            if (isDeviceOnline) {
+                isDeviceOnline = false;
+                setMqttStatus('mqtt-offline', 'Thiết bị: NGOẠI TUYẾN (Mất Wi-Fi / Mất điện)');
+                document.getElementById('sysTimeDisplay').innerText = '--:--:-- - --/--/----';
+            }
+        }
+    }
 
-    const topic_control = "namzeze_khach1/control";
-    const topic_status = "namzeze_khach1/status";
-    const topic_schedules = "namzeze_khach1/schedules";
-    const topic_get_schedules = "namzeze_khach1/get_schedules";
+    function createOptions(max, defaultVal) {
+        let opt = '';
+        for (let i = 0; i < max; i++) {
+            let val = i < 10 ? '0' + i : i;
+            let selected = (i === defaultVal) ? 'selected' : '';
+            opt += `<option value="${i}" ${selected}>${val}</option>`;
+        }
+        return opt;
+    }
 
-    let client = new Paho.MQTT.Client(broker, port, "/mqtt", clientId);
+    function renderSchedules() {
+        const container = document.getElementById('scheduleContainer');
+        let html = '';
+        for (let i = 1; i <= 10; i++) {
+            html += `
+            <div class="sched-card">
+                <div class="sched-header">
+                    <span>Lịch ${i}</span>
+                    <label><input type="checkbox" id="act_${i}"> Kích hoạt</label>
+                </div>
+                <div class="time-row">
+                    <span style="width: 35px;">Bật:</span>
+                    <select id="onH_${i}">${createOptions(24, 6)}</select> Giờ
+                    <select id="onM_${i}">${createOptions(60, 0)}</select> Phút
+                </div>
+                <div class="time-row">
+                    <span style="width: 35px;">Tắt:</span>
+                    <select id="offH_${i}">${createOptions(24, 18)}</select> Giờ
+                    <select id="offM_${i}">${createOptions(60, 0)}</select> Phút
+                </div>
+                <div class="days-group">
+                    ${dayNames.map((d, dIdx) => `
+                        <div class="day-item">
+                            <span>${d}</span>
+                            <input type="checkbox" id="day_${i}_${dIdx}">
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+        }
+        container.innerHTML = html;
+    }
+
+    renderSchedules();
 
     client.onConnectionLost = function (responseObject) {
-        console.log("Mất kết nối MQTT: " + responseObject.errorMessage);
-        setTimeout(connectMQTT, 3000);
+        setMqttStatus('mqtt-offline', 'Hệ thống: Mất kết nối Server!');
+        isDeviceOnline = false;
+        if (responseObject.errorCode !== 0) {
+            setTimeout(connectMQTT, 3000);
+        }
     };
 
     client.onMessageArrived = function (message) {
-        let topic = message.destinationName;
-        let payload = message.payloadString;
+        const topic = message.destinationName;
+        const payload = message.payloadString;
 
-        // Xử lý thông tin trạng thái và thời gian từ ESP
-        if (topic === topic_status) {
+        if (topic === 'namzeze_khach1/status') {
+            if (payload === 'OFFLINE') {
+                isDeviceOnline = false;
+                setMqttStatus('mqtt-offline', 'Thiết bị: NGOẠI TUYẾN (Mất Wi-Fi / Mất điện)');
+                return;
+            }
+
+            lastHeartbeat = Date.now();
+            if (!isDeviceOnline) {
+                isDeviceOnline = true;
+                setMqttStatus('mqtt-online', 'Thiết bị: ĐANG HOẠT ĐỘNG (Online)');
+            }
+
             try {
-                let data = JSON.parse(payload);
-                let statusEl = document.getElementById("pump-status");
-                let timeEl = document.getElementById("system-time");
-
-                if (data.status === "ON") {
-                    statusEl.innerText = "ĐANG BẬT";
-                    statusEl.className = "status st-on";
-                } else {
-                    statusEl.innerText = "ĐANG TẮT";
-                    statusEl.className = "status st-off";
-                }
-                if (data.time) timeEl.innerText = "Thời gian: " + data.time;
-            } catch (e) { console.error(e); }
-        } 
-        // Đọc 10 lịch trình từ EEPROM ESP gửi lên
-        else if (topic === topic_get_schedules) {
+                const data = JSON.parse(payload);
+                currentState = data.status;
+                document.getElementById('sysTimeDisplay').innerText = data.time;
+                updateStatusUI(currentState === 'ON');
+            } catch(e) {
+                currentState = payload;
+                updateStatusUI(currentState === 'ON');
+            }
+        } else if (topic === 'namzeze_khach1/get_schedules') {
             try {
-                let schedules = JSON.parse(payload);
-                for (let i = 0; i < schedules.length && i < 10; i++) {
-                    let chk = document.getElementById(`active_${i}`);
-                    let onInp = document.getElementById(`onH_${i}`);
-                    let offInp = document.getElementById(`offH_${i}`);
-
-                    if (chk) chk.checked = schedules[i].active;
-                    if (onInp) onInp.value = String(schedules[i].onH).padStart(2, '0') + ":" + String(schedules[i].onM).padStart(2, '0');
-                    if (offInp) offInp.value = String(schedules[i].offH).padStart(2, '0') + ":" + String(schedules[i].offM).padStart(2, '0');
-                }
-            } catch (e) { console.error(e); }
+                const schedules = JSON.parse(payload);
+                schedules.forEach((item, index) => {
+                    let i = index + 1;
+                    if (i <= 10) {
+                        document.getElementById(`act_${i}`).checked = item.active;
+                        document.getElementById(`onH_${i}`).value = item.onH;
+                        document.getElementById(`onM_${i}`).value = item.onM;
+                        document.getElementById(`offH_${i}`).value = item.offH;
+                        document.getElementById(`offM_${i}`).value = item.offM;
+                        if (item.days) {
+                            item.days.forEach((d, dIdx) => {
+                                document.getElementById(`day_${i}_${dIdx}`).checked = d;
+                            });
+                        }
+                    }
+                });
+            } catch(e) {
+                console.log("Lỗi parse lịch:", e);
+            }
         }
     };
 
     function connectMQTT() {
+        setMqttStatus('mqtt-connecting', 'Đang kết nối Server...');
         client.connect({
+            useSSL: true,
             onSuccess: function () {
-                console.log("Đã kết nối MQTT Broker!");
-                client.subscribe(topic_status);
-                client.subscribe(topic_get_schedules);
-                sendControl("GET_STATUS");
+                client.subscribe('namzeze_khach1/status');
+                client.subscribe('namzeze_khach1/get_schedules');
+                publishMessage('namzeze_khach1/control', 'GET_STATUS');
             },
-            onFailure: function (err) {
-                console.log("Lỗi kết nối MQTT: " + err.errorMessage);
-                setTimeout(connectMQTT, 5000);
-            },
-            useSSL: useSSL
+            onFailure: function (e) {
+                setMqttStatus('mqtt-offline', 'Lỗi kết nối Server! Đang thử lại...');
+                setTimeout(connectMQTT, 3000);
+            }
         });
     }
 
     connectMQTT();
 
-    function sendControl(command) {
-        if (!client.isConnected()) return;
-        let message = new Paho.MQTT.Message(command);
-        message.destinationName = topic_control;
+    // Chạy vòng lặp kiểm tra kết nối thiết bị mỗi giây
+    setInterval(checkDeviceTimeout, 1000);
+
+    function publishMessage(topic, payload) {
+        if (!client.isConnected()) {
+            alert("Chưa kết nối đến Server!");
+            return;
+        }
+        const message = new Paho.MQTT.Message(payload);
+        message.destinationName = topic;
         client.send(message);
     }
 
-    // Đóng gói mảng JSON gửi về cho hàm processSchedulePayload() trên ESP
-    function saveSchedules() {
-        if (!client.isConnected()) {
-            alert("Chưa kết nối đến MQTT Server!");
+    function updateStatusUI(isOn) {
+        const statusBox = document.getElementById('statusBox');
+        const btn = document.getElementById('btnToggle');
+        if (isOn) {
+            statusBox.className = 'status-box status-on';
+            statusBox.innerText = 'TRẠNG THÁI: BƠM ĐANG BẬT (ON)';
+            btn.className = 'btn-toggle off';
+            btn.innerText = 'TẮT BƠM NGAY';
+        } else {
+            statusBox.className = 'status-box status-off';
+            statusBox.innerText = 'TRẠNG THÁI: BƠM ĐANG TẮT (OFF)';
+            btn.className = 'btn-toggle';
+            btn.innerText = 'BẬT BƠM NGAY';
+        }
+    }
+
+    function togglePump() {
+        if (!isDeviceOnline) {
+            alert("Thiết bị đang Ngoại tuyến! Không thể thực hiện lệnh.");
             return;
         }
+        const cmd = (currentState === 'ON') ? 'OFF' : 'ON';
+        publishMessage('namzeze_khach1/control', cmd);
+    }
 
-        let schedulesData = [];
-        for (let i = 0; i < 10; i++) {
-            let activeEl = document.getElementById(`active_${i}`);
-            let onEl = document.getElementById(`onH_${i}`);
-            let offEl = document.getElementById(`offH_${i}`);
+    function syncPhoneTime() {
+        if (!isDeviceOnline) {
+            alert("Thiết bị đang Ngoại tuyến!");
+            return;
+        }
+        publishMessage('namzeze_khach1/control', 'GET_STATUS');
+        alert("Đã gửi yêu cầu đồng bộ!");
+    }
 
-            let onTime = (onEl && onEl.value) ? onEl.value.split(":") : ["00", "00"];
-            let offTime = (offEl && offEl.value) ? offEl.value.split(":") : ["00", "00"];
+    function resetWifi() {
+        if (!isDeviceOnline) {
+            alert("Thiết bị đang Ngoại tuyến!");
+            return;
+        }
+        if (confirm("Xác nhận đổi mạng Wi-Fi? Thiết bị sẽ phát mạng 'Cai-Dat-Thiet-Bi'.")) {
+            publishMessage('namzeze_khach1/control', 'RESET_WIFI');
+            alert("Đã gửi lệnh! Kết nối vào Wi-Fi 'Cai-Dat-Thiet-Bi' để cấu hình.");
+        }
+    }
 
-            schedulesData.push({
-                active: activeEl ? activeEl.checked : false,
-                onH: parseInt(onTime[0], 10) || 0,
-                onM: parseInt(onTime[1], 10) || 0,
-                offH: parseInt(offTime[0], 10) || 0,
-                offM: parseInt(offTime[1], 10) || 0,
-                days: [true, true, true, true, true, true, true] // Khớp mảng bool days[7] trong struct ESP
+    function saveSchedules() {
+        if (!isDeviceOnline) {
+            alert("Thiết bị đang Ngoại tuyến! Không thể lưu lịch.");
+            return;
+        }
+        let schedules = [];
+        for (let i = 1; i <= 10; i++) {
+            const active = document.getElementById(`act_${i}`).checked;
+            const onH = parseInt(document.getElementById(`onH_${i}`).value, 10);
+            const onM = parseInt(document.getElementById(`onM_${i}`).value, 10);
+            const offH = parseInt(document.getElementById(`offH_${i}`).value, 10);
+            const offM = parseInt(document.getElementById(`offM_${i}`).value, 10);
+
+            let days = [];
+            for (let d = 0; d < 7; d++) {
+                days.push(document.getElementById(`day_${i}_${d}`).checked ? true : false);
+            }
+
+            schedules.push({
+                active: active,
+                onH: onH,
+                onM: onM,
+                offH: offH,
+                offM: offM,
+                days: days
             });
         }
 
-        let message = new Paho.MQTT.Message(JSON.stringify(schedulesData));
-        message.destinationName = topic_schedules;
-        client.send(message);
-
-        alert("Đã gửi lịch hẹn giờ xuống thiết bị!");
+        publishMessage('namzeze_khach1/schedules', JSON.stringify(schedules));
+        alert("Đã gửi lịch hẹn giờ!");
     }
 </script>
 
