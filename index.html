@@ -9,7 +9,7 @@
         body { font-family: Arial, sans-serif; background: #eef2f5; margin: 0; padding: 15px; }
         .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: center; }
         h2 { margin-top: 0; color: #222; }
-        .mqtt-status { padding: 8px; border-radius: 6px; font-weight: bold; font-size: 14px; margin-bottom: 12px; transition: 0.3s; }
+        .mqtt-status { padding: 10px; border-radius: 6px; font-weight: bold; font-size: 15px; margin-bottom: 12px; transition: 0.3s; }
         .mqtt-online { background: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
         .mqtt-offline { background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
         .mqtt-connecting { background: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
@@ -22,6 +22,7 @@
         .status-on { background: #d4edda; color: #155724; }
         .btn-toggle { background: #28a745; color: white; border: none; padding: 14px; width: 100%; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; }
         .btn-toggle.off { background: #dc3545; }
+        .btn-disabled { opacity: 0.5; cursor: not-allowed !important; }
         .sched-title { font-size: 18px; font-weight: bold; text-align: left; margin-top: 25px; margin-bottom: 15px; border-bottom: 2px solid #ddd; padding-bottom: 5px; color: #333; }
         .sched-card { background: #fdfdfd; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; margin-bottom: 12px; text-align: left; }
         .sched-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 8px; }
@@ -37,7 +38,7 @@
 <div class="container">
     <h2>Điều Khiển Bơm Tự Động</h2>
     
-    <div id="mqttStatusBox" class="mqtt-status mqtt-connecting">Hệ thống: Đang kết nối Server...</div>
+    <div id="mqttStatusBox" class="mqtt-status mqtt-connecting">Đang kiểm tra kết nối thiết bị...</div>
 
     <div class="sys-time">Giờ hệ thống: <span id="sysTimeDisplay">--:--:-- - --/--/----</span></div>
     
@@ -61,12 +62,27 @@
 
     const client = new Paho.MQTT.Client(hostname, port, clientId);
     let currentState = "OFF";
+    let isDeviceOnline = false;
+    let lastHeartbeat = 0;
+    let heartbeatTimer = null;
+
     const dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
     function setMqttStatus(state, text) {
         const box = document.getElementById('mqttStatusBox');
         box.className = 'mqtt-status ' + state;
         box.innerText = text;
+    }
+
+    function checkDeviceTimeout() {
+        // Nếu quá 6 giây không thấy tin nhắn từ ESP8266 => Báo Offline
+        if (Date.now() - lastHeartbeat > 6000) {
+            if (isDeviceOnline) {
+                isDeviceOnline = false;
+                setMqttStatus('mqtt-offline', 'Thiết bị: NGOẠI TUYẾN (Mất Wi-Fi / Mất điện)');
+                document.getElementById('sysTimeDisplay').innerText = '--:--:-- - --/--/----';
+            }
+        }
     }
 
     function createOptions(max, defaultVal) {
@@ -115,7 +131,8 @@
     renderSchedules();
 
     client.onConnectionLost = function (responseObject) {
-        setMqttStatus('mqtt-offline', 'Hệ thống: Mất kết nối Server! Đang kết nối lại...');
+        setMqttStatus('mqtt-offline', 'Hệ thống: Mất kết nối Server!');
+        isDeviceOnline = false;
         if (responseObject.errorCode !== 0) {
             setTimeout(connectMQTT, 3000);
         }
@@ -126,6 +143,18 @@
         const payload = message.payloadString;
 
         if (topic === 'namzeze_khach1/status') {
+            if (payload === 'OFFLINE') {
+                isDeviceOnline = false;
+                setMqttStatus('mqtt-offline', 'Thiết bị: NGOẠI TUYẾN (Mất Wi-Fi / Mất điện)');
+                return;
+            }
+
+            lastHeartbeat = Date.now();
+            if (!isDeviceOnline) {
+                isDeviceOnline = true;
+                setMqttStatus('mqtt-online', 'Thiết bị: ĐANG HOẠT ĐỘNG (Online)');
+            }
+
             try {
                 const data = JSON.parse(payload);
                 currentState = data.status;
@@ -160,17 +189,16 @@
     };
 
     function connectMQTT() {
-        setMqttStatus('mqtt-connecting', 'Hệ thống: Đang kết nối Server...');
+        setMqttStatus('mqtt-connecting', 'Đang kết nối Server...');
         client.connect({
             useSSL: true,
             onSuccess: function () {
-                setMqttStatus('mqtt-online', 'Hệ thống: Đã kết nối (Sẵn sàng)');
                 client.subscribe('namzeze_khach1/status');
                 client.subscribe('namzeze_khach1/get_schedules');
                 publishMessage('namzeze_khach1/control', 'GET_STATUS');
             },
             onFailure: function (e) {
-                setMqttStatus('mqtt-offline', 'Hệ thống: Lỗi kết nối Server! Thử lại sau 3s...');
+                setMqttStatus('mqtt-offline', 'Lỗi kết nối Server! Đang thử lại...');
                 setTimeout(connectMQTT, 3000);
             }
         });
@@ -178,9 +206,12 @@
 
     connectMQTT();
 
+    // Chạy vòng lặp kiểm tra kết nối thiết bị mỗi giây
+    setInterval(checkDeviceTimeout, 1000);
+
     function publishMessage(topic, payload) {
         if (!client.isConnected()) {
-            alert("Chưa kết nối đến Server, vui lòng đợi trong giây lát!");
+            alert("Chưa kết nối đến Server!");
             return;
         }
         const message = new Paho.MQTT.Message(payload);
@@ -205,23 +236,39 @@
     }
 
     function togglePump() {
+        if (!isDeviceOnline) {
+            alert("Thiết bị đang Ngoại tuyến! Không thể thực hiện lệnh.");
+            return;
+        }
         const cmd = (currentState === 'ON') ? 'OFF' : 'ON';
         publishMessage('namzeze_khach1/control', cmd);
     }
 
     function syncPhoneTime() {
+        if (!isDeviceOnline) {
+            alert("Thiết bị đang Ngoại tuyến!");
+            return;
+        }
         publishMessage('namzeze_khach1/control', 'GET_STATUS');
         alert("Đã gửi yêu cầu đồng bộ!");
     }
 
     function resetWifi() {
-        if (confirm("Xác nhận đổi mạng Wi-Fi? Thiết bị sẽ xóa Wi-Fi cũ và phát lại mạng 'Cai-Dat-Thiet-Bi'.")) {
+        if (!isDeviceOnline) {
+            alert("Thiết bị đang Ngoại tuyến!");
+            return;
+        }
+        if (confirm("Xác nhận đổi mạng Wi-Fi? Thiết bị sẽ phát mạng 'Cai-Dat-Thiet-Bi'.")) {
             publishMessage('namzeze_khach1/control', 'RESET_WIFI');
-            alert("Đã gửi lệnh! Hãy kết nối Wi-Fi điện thoại vào mạng 'Cai-Dat-Thiet-Bi' để nhập Wi-Fi mới.");
+            alert("Đã gửi lệnh! Kết nối vào Wi-Fi 'Cai-Dat-Thiet-Bi' để cấu hình.");
         }
     }
 
     function saveSchedules() {
+        if (!isDeviceOnline) {
+            alert("Thiết bị đang Ngoại tuyến! Không thể lưu lịch.");
+            return;
+        }
         let schedules = [];
         for (let i = 1; i <= 10; i++) {
             const active = document.getElementById(`act_${i}`).checked;
@@ -246,7 +293,7 @@
         }
 
         publishMessage('namzeze_khach1/schedules', JSON.stringify(schedules));
-        alert("Đã lưu lịch hẹn giờ thành công!");
+        alert("Đã gửi lịch hẹn giờ!");
     }
 </script>
 
