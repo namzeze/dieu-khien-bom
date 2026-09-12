@@ -35,7 +35,6 @@
 <div class="container">
     <h2>Điều Khiển Bơm Tự Động</h2>
     
-    <!-- Ô hiển thị trạng thái kết nối -->
     <div id="mqttStatusBox" class="mqtt-status mqtt-connecting">Hệ thống: Đang kết nối Server...</div>
 
     <div class="sys-time">Giờ hệ thống: <span id="sysTimeDisplay">--:--:-- - --/--/----</span></div>
@@ -43,7 +42,7 @@
     <div id="statusBox" class="status-box status-off">TRẠNG THÁI: BƠM ĐANG TẮT (OFF)</div>
     <button id="btnToggle" class="btn-toggle" onclick="togglePump()">BẬT BƠM NGAY</button>
 
-    <div class="sched-title">Lịch Bật/Tắt Bơm Tự Động</div>
+    <div class="sched-title">Lịch Bơm Tự Động</div>
     <div id="scheduleContainer"></div>
     <button class="btn-save" onclick="saveSchedules()">LƯU LỊCH HẸN GIỜ</button>
 </div>
@@ -116,15 +115,39 @@
     };
 
     client.onMessageArrived = function (message) {
-        if (message.destinationName === 'namzeze_khach1/status') {
+        const topic = message.destinationName;
+        const payload = message.payloadString;
+
+        if (topic === 'namzeze_khach1/status') {
             try {
-                const data = JSON.parse(message.payloadString);
+                const data = JSON.parse(payload);
                 currentState = data.status;
                 document.getElementById('sysTimeDisplay').innerText = data.time;
                 updateStatusUI(currentState === 'ON');
             } catch(e) {
-                currentState = message.payloadString;
+                currentState = payload;
                 updateStatusUI(currentState === 'ON');
+            }
+        } else if (topic === 'namzeze_khach1/get_schedules') {
+            try {
+                const schedules = JSON.parse(payload);
+                schedules.forEach((item, index) => {
+                    let i = index + 1;
+                    if (i <= 10) {
+                        document.getElementById(`act_${i}`).checked = item.active;
+                        document.getElementById(`onH_${i}`).value = item.onH;
+                        document.getElementById(`onM_${i}`).value = item.onM;
+                        document.getElementById(`offH_${i}`).value = item.offH;
+                        document.getElementById(`offM_${i}`).value = item.offM;
+                        if (item.days) {
+                            item.days.forEach((d, dIdx) => {
+                                document.getElementById(`day_${i}_${dIdx}`).checked = d;
+                            });
+                        }
+                    }
+                });
+            } catch(e) {
+                console.log("Lỗi parse lịch:", e);
             }
         }
     };
@@ -136,6 +159,9 @@
             onSuccess: function () {
                 setMqttStatus('mqtt-online', 'Hệ thống: Đã kết nối (Sẵn sàng)');
                 client.subscribe('namzeze_khach1/status');
+                client.subscribe('namzeze_khach1/get_schedules');
+                
+                // Yêu cầu ESP gửi lại cả trạng thái lẫn danh sách lịch
                 publishMessage('namzeze_khach1/control', 'GET_STATUS');
             },
             onFailure: function (e) {
