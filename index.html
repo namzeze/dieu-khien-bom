@@ -41,8 +41,8 @@
 </div>
 
 <script>
-    // Sử dụng Cổng WebSocket công cộng không bị mạng 3G/4G chặn
-    const host = "ws://broker.hivemq.com:8000/mqtt";
+    // Dùng kết nối wss:// mã hóa chuẩn HTTPS cho GitHub Pages
+    const host = "wss://broker.hivemq.com:8884/mqtt";
     const options = {
         clientId: 'WebClient_' + Math.random().toString(16).substr(2, 8)
     };
