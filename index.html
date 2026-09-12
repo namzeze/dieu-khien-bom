@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Điều Khiển Bơm Tự Động</title>
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #eef2f5; margin: 0; padding: 15px; }
         .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: center; }
@@ -41,14 +41,11 @@
 </div>
 
 <script>
-    // Mã hóa WSS chuẩn SSL kết nối cổng 8084 của EMQX Broker
-    const host = "wss://broker.emqx.io:8084/mqtt";
-    const options = {
-        clientId: 'WebClient_' + Math.random().toString(16).substr(2, 8),
-        keepalive: 60
-    };
+    const hostname = "broker.hivemq.com";
+    const port = 8884;
+    const clientId = "WebClient_" + Math.random().toString(16).substr(2, 8);
 
-    const client = mqtt.connect(host, options);
+    const client = new Paho.MQTT.Client(hostname, port, clientId);
     let currentState = "OFF";
     const dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
@@ -97,24 +94,49 @@
 
     renderSchedules();
 
-    client.on('connect', () => {
-        client.subscribe('namzeze_khach1/status');
-        client.publish('namzeze_khach1/control', 'GET_STATUS');
-    });
+    client.onConnectionLost = function (responseObject) {
+        if (responseObject.errorCode !== 0) {
+            console.log("Mất kết nối: " + responseObject.errorMessage);
+            setTimeout(connectMQTT, 3000);
+        }
+    };
 
-    client.on('message', (topic, message) => {
-        if (topic === 'namzeze_khach1/status') {
+    client.onMessageArrived = function (message) {
+        if (message.destinationName === 'namzeze_khach1/status') {
             try {
-                const data = JSON.parse(message.toString());
+                const data = JSON.parse(message.payloadString);
                 currentState = data.status;
                 document.getElementById('sysTimeDisplay').innerText = data.time;
                 updateStatusUI(currentState === 'ON');
             } catch(e) {
-                currentState = message.toString();
+                currentState = message.payloadString;
                 updateStatusUI(currentState === 'ON');
             }
         }
-    });
+    };
+
+    function connectMQTT() {
+        client.connect({
+            useSSL: true,
+            onSuccess: function () {
+                console.log("Đã kết nối WSS thành công!");
+                client.subscribe('namzeze_khach1/status');
+                publishMessage('namzeze_khach1/control', 'GET_STATUS');
+            },
+            onFailure: function (e) {
+                console.log("Lỗi kết nối: ", e);
+                setTimeout(connectMQTT, 3000);
+            }
+        });
+    }
+
+    connectMQTT();
+
+    function publishMessage(topic, payload) {
+        const message = new Paho.MQTT.Message(payload);
+        message.destinationName = topic;
+        client.send(message);
+    }
 
     function updateStatusUI(isOn) {
         const statusBox = document.getElementById('statusBox');
@@ -134,11 +156,11 @@
 
     function togglePump() {
         const cmd = (currentState === 'ON') ? 'OFF' : 'ON';
-        client.publish('namzeze_khach1/control', cmd);
+        publishMessage('namzeze_khach1/control', cmd);
     }
 
     function syncPhoneTime() {
-        client.publish('namzeze_khach1/control', 'GET_STATUS');
+        publishMessage('namzeze_khach1/control', 'GET_STATUS');
         alert("Đã gửi yêu cầu đồng bộ!");
     }
 
@@ -166,7 +188,7 @@
             });
         }
 
-        client.publish('namzeze_khach1/schedules', JSON.stringify(schedules));
+        publishMessage('namzeze_khach1/schedules', JSON.stringify(schedules));
         alert("Đã lưu lịch hẹn giờ thành công!");
     }
 </script>
