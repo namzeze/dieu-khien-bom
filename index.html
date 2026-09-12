@@ -1,301 +1,1231 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
     <title>Điều Khiển Bơm Tự Động</title>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+
     <style>
-        body { font-family: Arial, sans-serif; background: #eef2f5; margin: 0; padding: 15px; }
-        .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: center; }
-        h2 { margin-top: 0; color: #222; }
-        .mqtt-status { padding: 10px; border-radius: 6px; font-weight: bold; font-size: 15px; margin-bottom: 12px; transition: 0.3s; }
-        .mqtt-online { background: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
-        .mqtt-offline { background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
-        .mqtt-connecting { background: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
-        .sys-time { font-size: 15px; font-weight: bold; color: #444; margin-bottom: 12px; }
-        .btn-group { display: flex; gap: 8px; margin-bottom: 12px; }
-        .btn-sync { background: #17a2b8; color: white; border: none; padding: 10px; flex: 1; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .btn-wifi { background: #ffc107; color: #333; border: none; padding: 10px; flex: 1; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .status-box { padding: 12px; border-radius: 6px; font-weight: bold; font-size: 16px; margin-bottom: 12px; }
-        .status-off { background: #f8d7da; color: #721c24; }
-        .status-on { background: #d4edda; color: #155724; }
-        .btn-toggle { background: #28a745; color: white; border: none; padding: 14px; width: 100%; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; }
-        .btn-toggle.off { background: #dc3545; }
-        .btn-disabled { opacity: 0.5; cursor: not-allowed !important; }
-        .sched-title { font-size: 18px; font-weight: bold; text-align: left; margin-top: 25px; margin-bottom: 15px; border-bottom: 2px solid #ddd; padding-bottom: 5px; color: #333; }
-        .sched-card { background: #fdfdfd; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; margin-bottom: 12px; text-align: left; }
-        .sched-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 8px; }
-        .time-row { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; font-size: 14px; }
-        select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; }
-        .days-group { display: flex; justify-content: space-between; font-size: 12px; text-align: center; margin-top: 10px; }
-        .day-item { display: flex; flex-direction: column; align-items: center; }
-        .btn-save { background: #0d6efd; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #eef2f5;
+            margin: 0;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #222;
+        }
+
+        .mqtt-status {
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 15px;
+            margin-bottom: 12px;
+            transition: 0.3s;
+        }
+
+        .mqtt-online {
+            background: #d1e7dd;
+            color: #0f5132;
+            border: 1px solid #badbcc;
+        }
+
+        .mqtt-offline {
+            background: #f8d7da;
+            color: #842029;
+            border: 1px solid #f5c2c7;
+        }
+
+        .mqtt-connecting {
+            background: #fff3cd;
+            color: #664d03;
+            border: 1px solid #ffecb5;
+        }
+
+        .sys-time {
+            font-size: 15px;
+            font-weight: bold;
+            color: #444;
+            margin-bottom: 12px;
+        }
+
+        .mode-box {
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+
+        .mode-manual {
+            background: #e8d9ff;
+            color: #6f42c1;
+        }
+
+        .mode-auto {
+            background: #d1e7dd;
+            color: #198754;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .btn-sync {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 10px;
+            flex: 1;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-wifi {
+            background: #ffc107;
+            color: #333;
+            border: none;
+            padding: 10px;
+            flex: 1;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .status-box {
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .status-off {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-on {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .btn-toggle {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 14px;
+            width: 100%;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-toggle.off {
+            background: #dc3545;
+        }
+
+        .btn-auto {
+            background: #6f42c1;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .sched-title {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: left;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 5px;
+            color: #333;
+        }
+
+        .sched-card {
+            background: #fdfdfd;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            text-align: left;
+        }
+
+        .sched-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .time-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+
+        select {
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .days-group {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .day-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .btn-save {
+            background: #0d6efd;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
     </style>
+
 </head>
+
 <body>
 
 <div class="container">
-    <h2>Điều Khiển Bơm Tự Động</h2>
-    
-    <div id="mqttStatusBox" class="mqtt-status mqtt-connecting">Đang kiểm tra kết nối thiết bị...</div>
 
-    <div class="sys-time">Giờ hệ thống: <span id="sysTimeDisplay">--:--:-- - --/--/----</span></div>
-    
-    <div class="btn-group">
-        <button class="btn-sync" onclick="syncPhoneTime()">ĐỒNG BỘ GIỜ</button>
-        <button class="btn-wifi" onclick="resetWifi()">ĐỔI MẠNG WI-FI</button>
+    <h2>Điều Khiển Bơm Tự Động</h2>
+
+    <div
+        id="mqttStatusBox"
+        class="mqtt-status mqtt-connecting"
+    >
+        Đang kiểm tra kết nối thiết bị...
     </div>
 
-    <div id="statusBox" class="status-box status-off">TRẠNG THÁI: BƠM ĐANG TẮT (OFF)</div>
-    <button id="btnToggle" class="btn-toggle" onclick="togglePump()">BẬT BƠM NGAY</button>
+    <div class="sys-time">
 
-    <div class="sched-title">Lịch Bơm Tự Động</div>
+        Giờ hệ thống:
+
+        <span id="sysTimeDisplay">
+            --:--:-- - --/--/----
+        </span>
+
+    </div>
+
+    <div
+        id="modeBox"
+        class="mode-box mode-auto"
+    >
+        CHẾ ĐỘ: AUTO
+    </div>
+
+    <div class="btn-group">
+
+        <button
+            class="btn-sync"
+            onclick="syncPhoneTime()"
+        >
+            ĐỒNG BỘ GIỜ
+        </button>
+
+        <button
+            class="btn-wifi"
+            onclick="resetWifi()"
+        >
+            ĐỔI MẠNG WI-FI
+        </button>
+
+    </div>
+
+    <div
+        id="statusBox"
+        class="status-box status-off"
+    >
+        TRẠNG THÁI: BƠM ĐANG TẮT (OFF)
+    </div>
+
+    <button
+        id="btnToggle"
+        class="btn-toggle"
+        onclick="togglePump()"
+    >
+        BẬT BƠM NGAY
+    </button>
+
+    <button
+        id="btnAuto"
+        class="btn-auto"
+        onclick="setAutoMode()"
+        style="display:none;"
+    >
+        CHUYỂN SANG CHẾ ĐỘ TỰ ĐỘNG
+    </button>
+
+    <div class="sched-title">
+        Lịch Bơm Tự Động
+    </div>
+
     <div id="scheduleContainer"></div>
-    <button class="btn-save" onclick="saveSchedules()">LƯU LỊCH HẸN GIỜ</button>
+
+    <button
+        class="btn-save"
+        onclick="saveSchedules()"
+    >
+        LƯU LỊCH HẸN GIỜ
+    </button>
+
 </div>
 
 <script>
-    const hostname = "broker.hivemq.com";
-    const port = 8884;
-    const clientId = "WebClient_" + Math.random().toString(16).substr(2, 8);
 
-    const client = new Paho.MQTT.Client(hostname, port, clientId);
-    let currentState = "OFF";
-    let isDeviceOnline = false;
-    let lastHeartbeat = 0;
-    let heartbeatTimer = null;
+// ============================================================
+// MQTT
+// ============================================================
 
-    const dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+const hostname =
+    "broker.hivemq.com";
 
-    function setMqttStatus(state, text) {
-        const box = document.getElementById('mqttStatusBox');
-        box.className = 'mqtt-status ' + state;
-        box.innerText = text;
-    }
+const port =
+    8884;
 
-    function checkDeviceTimeout() {
-        // Nếu quá 6 giây không thấy tin nhắn từ ESP8266 => Báo Offline
-        if (Date.now() - lastHeartbeat > 6000) {
-            if (isDeviceOnline) {
-                isDeviceOnline = false;
-                setMqttStatus('mqtt-offline', 'Thiết bị: NGOẠI TUYẾN (Mất Wi-Fi / Mất điện)');
-                document.getElementById('sysTimeDisplay').innerText = '--:--:-- - --/--/----';
-            }
+const clientId =
+    "WebClient_" +
+    Math.random()
+        .toString(16)
+        .substr(2, 8);
+
+const client =
+    new Paho.MQTT.Client(
+        hostname,
+        port,
+        clientId
+    );
+
+// ============================================================
+// VARIABLES
+// ============================================================
+
+let currentState =
+    "OFF";
+
+let manualMode =
+    false;
+
+let isDeviceOnline =
+    false;
+
+let lastHeartbeat =
+    0;
+
+// ============================================================
+// DAY
+// ============================================================
+
+const dayNames =
+    [
+        "CN",
+        "T2",
+        "T3",
+        "T4",
+        "T5",
+        "T6",
+        "T7"
+    ];
+
+// ============================================================
+// MQTT STATUS
+// ============================================================
+
+function setMqttStatus(
+    state,
+    text
+) {
+
+    const box =
+        document.getElementById(
+            "mqttStatusBox"
+        );
+
+    box.className =
+        "mqtt-status " + state;
+
+    box.innerText =
+        text;
+}
+
+// ============================================================
+// DEVICE TIMEOUT
+// ============================================================
+
+function checkDeviceTimeout() {
+
+    if (
+        Date.now() -
+        lastHeartbeat >
+        6000
+    ) {
+
+        if (
+            isDeviceOnline
+        ) {
+
+            isDeviceOnline =
+                false;
+
+            setMqttStatus(
+                "mqtt-offline",
+                "Thiết bị: NGOẠI TUYẾN (Mất Wi-Fi / Mất điện)"
+            );
+
+            document.getElementById(
+                "sysTimeDisplay"
+            ).innerText =
+                "--:--:-- - --/--/----";
         }
     }
+}
 
-    function createOptions(max, defaultVal) {
-        let opt = '';
-        for (let i = 0; i < max; i++) {
-            let val = i < 10 ? '0' + i : i;
-            let selected = (i === defaultVal) ? 'selected' : '';
-            opt += `<option value="${i}" ${selected}>${val}</option>`;
-        }
-        return opt;
+// ============================================================
+// OPTIONS
+// ============================================================
+
+function createOptions(
+    max,
+    defaultVal
+) {
+
+    let opt = "";
+
+    for (
+        let i = 0;
+        i < max;
+        i++
+    ) {
+
+        let val =
+            i < 10
+            ? "0" + i
+            : i;
+
+        let selected =
+            i === defaultVal
+            ? "selected"
+            : "";
+
+        opt +=
+            `<option value="${i}" ${selected}>${val}</option>`;
     }
 
-    function renderSchedules() {
-        const container = document.getElementById('scheduleContainer');
-        let html = '';
-        for (let i = 1; i <= 10; i++) {
-            html += `
-            <div class="sched-card">
-                <div class="sched-header">
-                    <span>Lịch ${i}</span>
-                    <label><input type="checkbox" id="act_${i}"> Kích hoạt</label>
-                </div>
-                <div class="time-row">
-                    <span style="width: 35px;">Bật:</span>
-                    <select id="onH_${i}">${createOptions(24, 6)}</select> Giờ
-                    <select id="onM_${i}">${createOptions(60, 0)}</select> Phút
-                </div>
-                <div class="time-row">
-                    <span style="width: 35px;">Tắt:</span>
-                    <select id="offH_${i}">${createOptions(24, 18)}</select> Giờ
-                    <select id="offM_${i}">${createOptions(60, 0)}</select> Phút
-                </div>
-                <div class="days-group">
-                    ${dayNames.map((d, dIdx) => `
-                        <div class="day-item">
-                            <span>${d}</span>
-                            <input type="checkbox" id="day_${i}_${dIdx}">
-                        </div>
-                    `).join('')}
-                </div>
-            </div>`;
-        }
-        container.innerHTML = html;
+    return opt;
+}
+
+// ============================================================
+// RENDER SCHEDULE
+// ============================================================
+
+function renderSchedules() {
+
+    const container =
+        document.getElementById(
+            "scheduleContainer"
+        );
+
+    let html = "";
+
+    for (
+        let i = 1;
+        i <= 10;
+        i++
+    ) {
+
+        html += `
+
+        <div class="sched-card">
+
+            <div class="sched-header">
+
+                <span>
+                    Lịch ${i}
+                </span>
+
+                <label>
+
+                    <input
+                        type="checkbox"
+                        id="act_${i}"
+                    >
+
+                    Kích hoạt
+
+                </label>
+
+            </div>
+
+            <div class="time-row">
+
+                <span style="width:35px;">
+                    Bật:
+                </span>
+
+                <select id="onH_${i}">
+                    ${createOptions(24, 6)}
+                </select>
+
+                Giờ
+
+                <select id="onM_${i}">
+                    ${createOptions(60, 0)}
+                </select>
+
+                Phút
+
+            </div>
+
+            <div class="time-row">
+
+                <span style="width:35px;">
+                    Tắt:
+                </span>
+
+                <select id="offH_${i}">
+                    ${createOptions(24, 18)}
+                </select>
+
+                Giờ
+
+                <select id="offM_${i}">
+                    ${createOptions(60, 0)}
+                </select>
+
+                Phút
+
+            </div>
+
+            <div class="days-group">
+
+                ${dayNames.map(
+                    (d, dIdx) => `
+
+                    <div class="day-item">
+
+                        <span>
+                            ${d}
+                        </span>
+
+                        <input
+                            type="checkbox"
+                            id="day_${i}_${dIdx}"
+                        >
+
+                    </div>
+
+                `
+                ).join("")}
+
+            </div>
+
+        </div>
+
+        `;
     }
 
-    renderSchedules();
+    container.innerHTML =
+        html;
+}
 
-    client.onConnectionLost = function (responseObject) {
-        setMqttStatus('mqtt-offline', 'Hệ thống: Mất kết nối Server!');
-        isDeviceOnline = false;
-        if (responseObject.errorCode !== 0) {
-            setTimeout(connectMQTT, 3000);
+// ============================================================
+// START
+// ============================================================
+
+renderSchedules();
+
+// ============================================================
+// MQTT CONNECTION LOST
+// ============================================================
+
+client.onConnectionLost =
+    function(responseObject) {
+
+        setMqttStatus(
+            "mqtt-offline",
+            "Hệ thống: Mất kết nối Server!"
+        );
+
+        isDeviceOnline =
+            false;
+
+        if (
+            responseObject.errorCode !== 0
+        ) {
+
+            setTimeout(
+                connectMQTT,
+                3000
+            );
         }
     };
 
-    client.onMessageArrived = function (message) {
-        const topic = message.destinationName;
-        const payload = message.payloadString;
+// ============================================================
+// MQTT MESSAGE
+// ============================================================
 
-        if (topic === 'namzeze_khach1/status') {
-            if (payload === 'OFFLINE') {
-                isDeviceOnline = false;
-                setMqttStatus('mqtt-offline', 'Thiết bị: NGOẠI TUYẾN (Mất Wi-Fi / Mất điện)');
+client.onMessageArrived =
+    function(message) {
+
+        const topic =
+            message.destinationName;
+
+        const payload =
+            message.payloadString;
+
+        // ====================================================
+        // STATUS
+        // ====================================================
+
+        if (
+            topic ===
+            "namzeze_khach1/status"
+        ) {
+
+            if (
+                payload ===
+                "OFFLINE"
+            ) {
+
+                isDeviceOnline =
+                    false;
+
+                setMqttStatus(
+                    "mqtt-offline",
+                    "Thiết bị: NGOẠI TUYẾN (Mất Wi-Fi / Mất điện)"
+                );
+
                 return;
             }
 
-            lastHeartbeat = Date.now();
-            if (!isDeviceOnline) {
-                isDeviceOnline = true;
-                setMqttStatus('mqtt-online', 'Thiết bị: ĐANG HOẠT ĐỘNG (Online)');
+            lastHeartbeat =
+                Date.now();
+
+            if (
+                !isDeviceOnline
+            ) {
+
+                isDeviceOnline =
+                    true;
+
+                setMqttStatus(
+                    "mqtt-online",
+                    "Thiết bị: ĐANG HOẠT ĐỘNG (Online)"
+                );
             }
 
             try {
-                const data = JSON.parse(payload);
-                currentState = data.status;
-                document.getElementById('sysTimeDisplay').innerText = data.time;
-                updateStatusUI(currentState === 'ON');
+
+                const data =
+                    JSON.parse(
+                        payload
+                    );
+
+                currentState =
+                    data.status;
+
+                manualMode =
+                    data.manual === true;
+
+                document.getElementById(
+                    "sysTimeDisplay"
+                ).innerText =
+                    data.time ||
+                    "--:--:-- - --/--/----";
+
+                updateStatusUI(
+                    currentState === "ON"
+                );
+
+                updateModeUI();
+
             } catch(e) {
-                currentState = payload;
-                updateStatusUI(currentState === 'ON');
+
+                console.log(
+                    "Lỗi parse status:",
+                    e
+                );
+
+                currentState =
+                    payload;
+
+                updateStatusUI(
+                    currentState === "ON"
+                );
             }
-        } else if (topic === 'namzeze_khach1/get_schedules') {
+
+        }
+
+        // ====================================================
+        // SCHEDULE
+        // ====================================================
+
+        else if (
+            topic ===
+            "namzeze_khach1/get_schedules"
+        ) {
+
             try {
-                const schedules = JSON.parse(payload);
-                schedules.forEach((item, index) => {
-                    let i = index + 1;
-                    if (i <= 10) {
-                        document.getElementById(`act_${i}`).checked = item.active;
-                        document.getElementById(`onH_${i}`).value = item.onH;
-                        document.getElementById(`onM_${i}`).value = item.onM;
-                        document.getElementById(`offH_${i}`).value = item.offH;
-                        document.getElementById(`offM_${i}`).value = item.offM;
-                        if (item.days) {
-                            item.days.forEach((d, dIdx) => {
-                                document.getElementById(`day_${i}_${dIdx}`).checked = d;
-                            });
+
+                const schedules =
+                    JSON.parse(
+                        payload
+                    );
+
+                schedules.forEach(
+                    (item, index) => {
+
+                        let i =
+                            index + 1;
+
+                        if (
+                            i <= 10
+                        ) {
+
+                            document.getElementById(
+                                `act_${i}`
+                            ).checked =
+                                item.active;
+
+                            document.getElementById(
+                                `onH_${i}`
+                            ).value =
+                                item.onH;
+
+                            document.getElementById(
+                                `onM_${i}`
+                            ).value =
+                                item.onM;
+
+                            document.getElementById(
+                                `offH_${i}`
+                            ).value =
+                                item.offH;
+
+                            document.getElementById(
+                                `offM_${i}`
+                            ).value =
+                                item.offM;
+
+                            if (
+                                item.days
+                            ) {
+
+                                item.days.forEach(
+                                    (d, dIdx) => {
+
+                                        const checkbox =
+                                            document.getElementById(
+                                                `day_${i}_${dIdx}`
+                                            );
+
+                                        if (
+                                            checkbox
+                                        ) {
+
+                                            checkbox.checked =
+                                                d;
+                                        }
+                                    }
+                                );
+                            }
                         }
                     }
-                });
+                );
+
             } catch(e) {
-                console.log("Lỗi parse lịch:", e);
+
+                console.log(
+                    "Lỗi parse lịch:",
+                    e
+                );
             }
         }
     };
 
-    function connectMQTT() {
-        setMqttStatus('mqtt-connecting', 'Đang kết nối Server...');
-        client.connect({
-            useSSL: true,
-            onSuccess: function () {
-                client.subscribe('namzeze_khach1/status');
-                client.subscribe('namzeze_khach1/get_schedules');
-                publishMessage('namzeze_khach1/control', 'GET_STATUS');
-            },
-            onFailure: function (e) {
-                setMqttStatus('mqtt-offline', 'Lỗi kết nối Server! Đang thử lại...');
-                setTimeout(connectMQTT, 3000);
-            }
+// ============================================================
+// CONNECT MQTT
+// ============================================================
+
+function connectMQTT() {
+
+    setMqttStatus(
+        "mqtt-connecting",
+        "Đang kết nối Server..."
+    );
+
+    client.connect({
+
+        useSSL: true,
+
+        timeout: 10,
+
+        onSuccess: function() {
+
+            setMqttStatus(
+                "mqtt-online",
+                "Đã kết nối Server"
+            );
+
+            client.subscribe(
+                "namzeze_khach1/status"
+            );
+
+            client.subscribe(
+                "namzeze_khach1/get_schedules"
+            );
+
+            publishMessage(
+                "namzeze_khach1/control",
+                "GET_STATUS"
+            );
+        },
+
+        onFailure: function(e) {
+
+            setMqttStatus(
+                "mqtt-offline",
+                "Lỗi kết nối Server! Đang thử lại..."
+            );
+
+            setTimeout(
+                connectMQTT,
+                3000
+            );
+        }
+    });
+}
+
+// ============================================================
+// START MQTT
+// ============================================================
+
+connectMQTT();
+
+// ============================================================
+// TIMEOUT CHECK
+// ============================================================
+
+setInterval(
+    checkDeviceTimeout,
+    1000
+);
+
+// ============================================================
+// MQTT PUBLISH
+// ============================================================
+
+function publishMessage(
+    topic,
+    payload
+) {
+
+    if (
+        !client.isConnected()
+    ) {
+
+        alert(
+            "Chưa kết nối đến Server!"
+        );
+
+        return;
+    }
+
+    const message =
+        new Paho.MQTT.Message(
+            payload
+        );
+
+    message.destinationName =
+        topic;
+
+    client.send(
+        message
+    );
+}
+
+// ============================================================
+// UPDATE PUMP UI
+// ============================================================
+
+function updateStatusUI(
+    isOn
+) {
+
+    const statusBox =
+        document.getElementById(
+            "statusBox"
+        );
+
+    const btn =
+        document.getElementById(
+            "btnToggle"
+        );
+
+    if (
+        isOn
+    ) {
+
+        statusBox.className =
+            "status-box status-on";
+
+        statusBox.innerText =
+            "TRẠNG THÁI: BƠM ĐANG BẬT (ON)";
+
+        btn.className =
+            "btn-toggle off";
+
+        btn.innerText =
+            "TẮT BƠM NGAY";
+
+    } else {
+
+        statusBox.className =
+            "status-box status-off";
+
+        statusBox.innerText =
+            "TRẠNG THÁI: BƠM ĐANG TẮT (OFF)";
+
+        btn.className =
+            "btn-toggle";
+
+        btn.innerText =
+            "BẬT BƠM NGAY";
+    }
+}
+
+// ============================================================
+// UPDATE MODE UI
+// ============================================================
+
+function updateModeUI() {
+
+    const modeBox =
+        document.getElementById(
+            "modeBox"
+        );
+
+    const autoButton =
+        document.getElementById(
+            "btnAuto"
+        );
+
+    if (
+        manualMode
+    ) {
+
+        modeBox.className =
+            "mode-box mode-manual";
+
+        modeBox.innerText =
+            "CHẾ ĐỘ: MANUAL";
+
+        autoButton.style.display =
+            "block";
+
+    } else {
+
+        modeBox.className =
+            "mode-box mode-auto";
+
+        modeBox.innerText =
+            "CHẾ ĐỘ: AUTO";
+
+        autoButton.style.display =
+            "none";
+    }
+}
+
+// ============================================================
+// MANUAL ON/OFF
+// ============================================================
+
+function togglePump() {
+
+    if (
+        !isDeviceOnline
+    ) {
+
+        alert(
+            "Thiết bị đang Ngoại tuyến! Không thể thực hiện lệnh."
+        );
+
+        return;
+    }
+
+    const cmd =
+        currentState === "ON"
+        ? "OFF"
+        : "ON";
+
+    publishMessage(
+        "namzeze_khach1/control",
+        cmd
+    );
+}
+
+// ============================================================
+// AUTO
+// ============================================================
+
+function setAutoMode() {
+
+    if (
+        !isDeviceOnline
+    ) {
+
+        alert(
+            "Thiết bị đang Ngoại tuyến!"
+        );
+
+        return;
+    }
+
+    if (
+        !confirm(
+            "Chuyển sang chế độ AUTO?\n\nLúc này lịch hẹn giờ sẽ được phép điều khiển bơm."
+        )
+    ) {
+
+        return;
+    }
+
+    publishMessage(
+        "namzeze_khach1/control",
+        "AUTO"
+    );
+}
+
+// ============================================================
+// SYNC
+// ============================================================
+
+function syncPhoneTime() {
+
+    if (
+        !isDeviceOnline
+    ) {
+
+        alert(
+            "Thiết bị đang Ngoại tuyến!"
+        );
+
+        return;
+    }
+
+    publishMessage(
+        "namzeze_khach1/control",
+        "GET_STATUS"
+    );
+
+    alert(
+        "Đã yêu cầu cập nhật giờ!"
+    );
+}
+
+// ============================================================
+// RESET WIFI
+// ============================================================
+
+function resetWifi() {
+
+    if (
+        !isDeviceOnline
+    ) {
+
+        alert(
+            "Thiết bị đang Ngoại tuyến!"
+        );
+
+        return;
+    }
+
+    if (
+        confirm(
+            "Xác nhận đổi mạng Wi-Fi?\n\nThiết bị sẽ mở Wi-Fi 'Cai-Dat-Thiet-Bi'."
+        )
+    ) {
+
+        publishMessage(
+            "namzeze_khach1/control",
+            "RESET_WIFI"
+        );
+
+        alert(
+            "Đã gửi lệnh.\n\nKết nối vào Wi-Fi 'Cai-Dat-Thiet-Bi' để cấu hình."
+        );
+    }
+}
+
+// ============================================================
+// SAVE SCHEDULE
+// ============================================================
+
+function saveSchedules() {
+
+    if (
+        !isDeviceOnline
+    ) {
+
+        alert(
+            "Thiết bị đang Ngoại tuyến! Không thể lưu lịch."
+        );
+
+        return;
+    }
+
+    let schedules = [];
+
+    for (
+        let i = 1;
+        i <= 10;
+        i++
+    ) {
+
+        const active =
+            document.getElementById(
+                `act_${i}`
+            ).checked;
+
+        const onH =
+            parseInt(
+                document.getElementById(
+                    `onH_${i}`
+                ).value,
+                10
+            );
+
+        const onM =
+            parseInt(
+                document.getElementById(
+                    `onM_${i}`
+                ).value,
+                10
+            );
+
+        const offH =
+            parseInt(
+                document.getElementById(
+                    `offH_${i}`
+                ).value,
+                10
+            );
+
+        const offM =
+            parseInt(
+                document.getElementById(
+                    `offM_${i}`
+                ).value,
+                10
+            );
+
+        let days = [];
+
+        for (
+            let d = 0;
+            d < 7;
+            d++
+        ) {
+
+            days.push(
+                document.getElementById(
+                    `day_${i}_${d}`
+                ).checked
+            );
+        }
+
+        schedules.push({
+
+            active:
+                active,
+
+            onH:
+                onH,
+
+            onM:
+                onM,
+
+            offH:
+                offH,
+
+            offM:
+                offM,
+
+            days:
+                days
         });
     }
 
-    connectMQTT();
+    // Chỉ gửi lịch.
+    // Không gửi OFF.
 
-    // Chạy vòng lặp kiểm tra kết nối thiết bị mỗi giây
-    setInterval(checkDeviceTimeout, 1000);
+    publishMessage(
+        "namzeze_khach1/schedules",
+        JSON.stringify(
+            schedules
+        )
+    );
 
-    function publishMessage(topic, payload) {
-        if (!client.isConnected()) {
-            alert("Chưa kết nối đến Server!");
-            return;
-        }
-        const message = new Paho.MQTT.Message(payload);
-        message.destinationName = topic;
-        client.send(message);
-    }
+    alert(
+        "Đã gửi lịch hẹn giờ!\n\nTrạng thái Manual của bơm không bị thay đổi."
+    );
+}
 
-    function updateStatusUI(isOn) {
-        const statusBox = document.getElementById('statusBox');
-        const btn = document.getElementById('btnToggle');
-        if (isOn) {
-            statusBox.className = 'status-box status-on';
-            statusBox.innerText = 'TRẠNG THÁI: BƠM ĐANG BẬT (ON)';
-            btn.className = 'btn-toggle off';
-            btn.innerText = 'TẮT BƠM NGAY';
-        } else {
-            statusBox.className = 'status-box status-off';
-            statusBox.innerText = 'TRẠNG THÁI: BƠM ĐANG TẮT (OFF)';
-            btn.className = 'btn-toggle';
-            btn.innerText = 'BẬT BƠM NGAY';
-        }
-    }
-
-    function togglePump() {
-        if (!isDeviceOnline) {
-            alert("Thiết bị đang Ngoại tuyến! Không thể thực hiện lệnh.");
-            return;
-        }
-        const cmd = (currentState === 'ON') ? 'OFF' : 'ON';
-        publishMessage('namzeze_khach1/control', cmd);
-    }
-
-    function syncPhoneTime() {
-        if (!isDeviceOnline) {
-            alert("Thiết bị đang Ngoại tuyến!");
-            return;
-        }
-        publishMessage('namzeze_khach1/control', 'GET_STATUS');
-        alert("Đã gửi yêu cầu đồng bộ!");
-    }
-
-    function resetWifi() {
-        if (!isDeviceOnline) {
-            alert("Thiết bị đang Ngoại tuyến!");
-            return;
-        }
-        if (confirm("Xác nhận đổi mạng Wi-Fi? Thiết bị sẽ phát mạng 'Cai-Dat-Thiet-Bi'.")) {
-            publishMessage('namzeze_khach1/control', 'RESET_WIFI');
-            alert("Đã gửi lệnh! Kết nối vào Wi-Fi 'Cai-Dat-Thiet-Bi' để cấu hình.");
-        }
-    }
-
-    function saveSchedules() {
-        if (!isDeviceOnline) {
-            alert("Thiết bị đang Ngoại tuyến! Không thể lưu lịch.");
-            return;
-        }
-        let schedules = [];
-        for (let i = 1; i <= 10; i++) {
-            const active = document.getElementById(`act_${i}`).checked;
-            const onH = parseInt(document.getElementById(`onH_${i}`).value, 10);
-            const onM = parseInt(document.getElementById(`onM_${i}`).value, 10);
-            const offH = parseInt(document.getElementById(`offH_${i}`).value, 10);
-            const offM = parseInt(document.getElementById(`offM_${i}`).value, 10);
-
-            let days = [];
-            for (let d = 0; d < 7; d++) {
-                days.push(document.getElementById(`day_${i}_${d}`).checked ? true : false);
-            }
-
-            schedules.push({
-                active: active,
-                onH: onH,
-                onM: onM,
-                offH: offH,
-                offM: offM,
-                days: days
-            });
-        }
-
-        publishMessage('namzeze_khach1/schedules', JSON.stringify(schedules));
-        alert("Đã gửi lịch hẹn giờ!");
-    }
 </script>
 
 </body>
+
 </html>
