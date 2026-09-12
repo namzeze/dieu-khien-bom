@@ -41,10 +41,11 @@
 </div>
 
 <script>
-    // Dùng kết nối wss:// mã hóa chuẩn HTTPS cho GitHub Pages
-    const host = "wss://broker.hivemq.com:8884/mqtt";
+    // Mã hóa WSS chuẩn SSL kết nối cổng 8084 của EMQX Broker
+    const host = "wss://broker.emqx.io:8084/mqtt";
     const options = {
-        clientId: 'WebClient_' + Math.random().toString(16).substr(2, 8)
+        clientId: 'WebClient_' + Math.random().toString(16).substr(2, 8),
+        keepalive: 60
     };
 
     const client = mqtt.connect(host, options);
@@ -97,12 +98,12 @@
     renderSchedules();
 
     client.on('connect', () => {
-        client.subscribe('khach1/status');
-        client.publish('khach1/control', 'GET_STATUS');
+        client.subscribe('namzeze_khach1/status');
+        client.publish('namzeze_khach1/control', 'GET_STATUS');
     });
 
     client.on('message', (topic, message) => {
-        if (topic === 'khach1/status') {
+        if (topic === 'namzeze_khach1/status') {
             try {
                 const data = JSON.parse(message.toString());
                 currentState = data.status;
@@ -133,11 +134,11 @@
 
     function togglePump() {
         const cmd = (currentState === 'ON') ? 'OFF' : 'ON';
-        client.publish('khach1/control', cmd);
+        client.publish('namzeze_khach1/control', cmd);
     }
 
     function syncPhoneTime() {
-        client.publish('khach1/control', 'GET_STATUS');
+        client.publish('namzeze_khach1/control', 'GET_STATUS');
         alert("Đã gửi yêu cầu đồng bộ!");
     }
 
@@ -165,7 +166,7 @@
             });
         }
 
-        client.publish('khach1/schedules', JSON.stringify(schedules));
+        client.publish('namzeze_khach1/schedules', JSON.stringify(schedules));
         alert("Đã lưu lịch hẹn giờ thành công!");
     }
 </script>
